@@ -1,0 +1,182 @@
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(ChessGame());
+}
+
+enum PieceType { pawn, rook, knight, bishop, queen, king }
+
+enum PieceColor { white, black }
+
+class Piece {
+  final PieceType type;
+  final PieceColor color;
+
+  Piece(this.type, this.color);
+}
+
+List<List<Piece?>> initialBoardSetup() {
+  return [
+    [
+      Piece(PieceType.rook, PieceColor.black),
+      Piece(PieceType.knight, PieceColor.black),
+      Piece(PieceType.bishop, PieceColor.black),
+      Piece(PieceType.queen, PieceColor.black),
+      Piece(PieceType.king, PieceColor.black),
+      Piece(PieceType.bishop, PieceColor.black),
+      Piece(PieceType.knight, PieceColor.black),
+      Piece(PieceType.rook, PieceColor.black),
+    ],
+    List.generate(8, (index) => Piece(PieceType.pawn, PieceColor.black)),
+    List.filled(8, null),
+    List.filled(8, null),
+    List.filled(8, null),
+    List.filled(8, null),
+    List.generate(8, (index) => Piece(PieceType.pawn, PieceColor.white)),
+    [
+      Piece(PieceType.rook, PieceColor.white),
+      Piece(PieceType.knight, PieceColor.white),
+      Piece(PieceType.bishop, PieceColor.white),
+      Piece(PieceType.queen, PieceColor.white),
+      Piece(PieceType.king, PieceColor.white),
+      Piece(PieceType.bishop, PieceColor.white),
+      Piece(PieceType.knight, PieceColor.white),
+      Piece(PieceType.rook, PieceColor.white),
+    ],
+  ];
+}
+
+class ChessGame extends StatefulWidget {
+  @override
+  _ChessGameState createState() => _ChessGameState();
+}
+
+class _ChessGameState extends State<ChessGame> {
+  List<List<Piece?>> board;
+  Piece? selectedPiece;
+  Offset? dragStart;
+  int? selectedRow;
+  int? selectedCol;
+
+  _ChessGameState() : board = initialBoardSetup();
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Chess Game',
+      home: Scaffold(
+        appBar: AppBar(title: Text('Chess')),
+        body: GestureDetector(
+          onPanStart: (details) {
+            dragStart = details.localPosition;
+            final row =
+                (dragStart!.dy ~/ (MediaQuery.of(context).size.width / 8));
+            final col =
+                (dragStart!.dx ~/ (MediaQuery.of(context).size.width / 8));
+            if (row < 8 && col < 8) {
+              selectedPiece = board[row][col];
+              selectedRow = row;
+              selectedCol = col;
+            }
+          },
+          onPanUpdate: (details) {
+            if (selectedPiece != null) {
+              setState(() {
+                dragStart = details.localPosition;
+              });
+            }
+          },
+          onPanEnd: (details) {
+            if (selectedPiece != null) {
+              final row =
+                  (dragStart!.dy ~/ (MediaQuery.of(context).size.width / 8));
+              final col =
+                  (dragStart!.dx ~/ (MediaQuery.of(context).size.width / 8));
+              if (row < 8 && col < 8) {
+                setState(() {
+                  board[row][col] = selectedPiece;
+                  board[selectedRow!][selectedCol!] = null;
+                  selectedPiece = null; 
+                });
+              }
+            }
+          },
+          child: GridView.builder(
+            gridDelegate:
+                SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 8),
+            itemCount: 64,
+            itemBuilder: (context, index) {
+              int row = index ~/ 8;
+              int col = index % 8;
+              Piece? piece = board[row][col];
+              return Container(
+                decoration: BoxDecoration(
+                  color: (row + col) % 2 == 0
+                      ? Colors.grey[300]
+                      : Color(0xFFA0522D),
+                ),
+                child: Center(
+                  child: piece != null
+                      ? DragTarget<Piece>(
+                          onWillAccept: (piece) => true,
+                          onAccept: (piece) {
+                            setState(() {
+                              board[row][col] = piece;
+                              board[selectedRow!][selectedCol!] = null;
+                              selectedPiece = null;
+                            });
+                          },
+                          builder: (context, candidates, rejects) {
+                            return Draggable<Piece>(
+                              data: piece,
+                              child: Text(
+                                pieceToString(piece),
+                                style: TextStyle(
+                                  color: piece.color == PieceColor.white
+                                      ? Colors.black
+                                      : Colors.white,
+                                  fontSize: 120,
+                                ),
+                              ),
+                              feedback: Text(
+                                pieceToString(piece),
+                                style: TextStyle(
+                                  color: piece.color == PieceColor.white
+                                      ? Colors.black
+                                      : Colors.white,
+                                  fontSize: 120,
+                                ),
+                              ),
+                              childWhenDragging: Container(),
+                            );
+                          },
+                        )
+                      : null,
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  String pieceToString(Piece piece) {
+    switch (piece.type) {
+      case PieceType.pawn:
+        return piece.color == PieceColor.white ? '♙' : '♟';
+      case PieceType.rook:
+        return piece.color == PieceColor.white ? '♖' : '♜';
+      case PieceType.knight:
+        return piece.color == PieceColor.white ? '♘' : '♞';
+      case PieceType.bishop:
+        return piece.color == PieceColor.white ? '♗' : '♝';
+      case PieceType.queen:
+        return piece.color == PieceColor.white ? '♕' : '♛';
+      case PieceType.king:
+        return piece.color == PieceColor.white ? '♔' : '♚';
+      default:
+        return '';
+    }
+  }
+}
